@@ -1,12 +1,13 @@
 package com.mariusmihai.banchelors.BullStock.services;
 
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.UserDto;
+import com.mariusmihai.banchelors.BullStock.dtos.stocks.UserHistory;
 import com.mariusmihai.banchelors.BullStock.models.Stock;
 import com.mariusmihai.banchelors.BullStock.models.User;
-import com.mariusmihai.banchelors.BullStock.repositories.UserRepository;
-import com.mariusmihai.banchelors.BullStock.repositories.UserStatisticsRepository;
-import com.mariusmihai.banchelors.BullStock.repositories.UserStockPortofolioRepository;
+import com.mariusmihai.banchelors.BullStock.models.UserTransaction;
+import com.mariusmihai.banchelors.BullStock.repositories.*;
 import com.mariusmihai.banchelors.BullStock.utils.Helpers;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -20,13 +21,20 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserStatisticsRepository userStatisticsRepository;
     private final UserStockPortofolioRepository userStockPortofolioRepository;
+    private final TransactionRepository transactionRepository;
+    private final UserTransactionRepository userTransactionRepository;
 
+    @Autowired
     public UserService(UserRepository userRepository,
                        UserStatisticsRepository userStatisticsRepository,
-                       UserStockPortofolioRepository userStockPortofolioRepository) {
+                       UserStockPortofolioRepository userStockPortofolioRepository,
+                       TransactionRepository transactionRepository,
+                       UserTransactionRepository userTransactionRepository) {
         this.userRepository = userRepository;
         this.userStatisticsRepository = userStatisticsRepository;
         this.userStockPortofolioRepository = userStockPortofolioRepository;
+        this.transactionRepository = transactionRepository;
+        this.userTransactionRepository = userTransactionRepository;
     }
 
     public ResponseEntity<List<UserDto>> getAllUsers() {
@@ -113,6 +121,38 @@ public class UserService {
                 return new ResponseEntity<>(response, HttpStatus.OK);
             }
             logMap.put("message", "Could not fetch user details");
+            return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            logMap.put("message", "An error has occurred. Please try again later.");
+            System.out.println(e.getMessage());
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    public ResponseEntity<Object> getHistory() {
+        Map<String, Object> logMap = new HashMap<>();
+        try {
+            var user = getLoggedUser();
+            if (null != user) {
+                var transactionsForUser = this.userTransactionRepository.getAllUserTransactions(user.getEmail());
+                var response = new ArrayList<UserHistory>();
+                for (UserTransaction userTransaction : transactionsForUser) {
+                    var userHistoryItem = new UserHistory()
+                            .setCloseDate(userTransaction.getTransaction().getCloseDate())
+                            .setClosePrice(userTransaction.getTransaction().getClosePrice())
+                            .setOpenDate(userTransaction.getTransaction().getOpenDate())
+                            .setOpenPrice(userTransaction.getTransaction().getOpenPrice())
+                            .setProfit(userTransaction.getTransaction().getClosePrice() - userTransaction.getTransaction().getOpenPrice())
+                            .setSymbol(userTransaction.getTransaction().getStock().getSymbol())
+                            .setTransactionId(userTransaction.getTransaction().getId())
+                            .setVolume(userTransaction.getTransaction().getVolume())
+                            .setType(userTransaction.getTransaction().getType());
+                    response.add(userHistoryItem);
+                }
+                return new ResponseEntity<>(response, HttpStatus.OK);
+            }
+            logMap.put("message", "Could not fetch history");
             return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             logMap.put("message", "An error has occurred. Please try again later.");

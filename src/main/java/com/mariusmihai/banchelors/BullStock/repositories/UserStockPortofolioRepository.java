@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface UserStockPortofolioRepository extends CrudRepository<UserStockPortofolioRepository, Integer> {
+public interface UserStockPortofolioRepository extends CrudRepository<UserStockPortofolio, Integer> {
 
     @Query("SELECT s FROM UserStockPortofolio s ORDER BY s.stock.symbol")
     List<UserStockPortofolio> getPortofolio();
