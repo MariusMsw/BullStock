@@ -18,8 +18,9 @@ import javax.persistence.*;
 public class UserTokens {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private int id;
     private String accessToken;
     private String refreshToken;
-    private Long userId;
+    @OneToOne
+    private User user;
 }

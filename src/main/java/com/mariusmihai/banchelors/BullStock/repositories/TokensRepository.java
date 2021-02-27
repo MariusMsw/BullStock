@@ -9,7 +9,7 @@ import java.util.Optional;
 @Repository
 public interface TokensRepository extends CrudRepository<UserTokens, Long> {
 
-    Optional<UserTokens> findByUserId(Long userId);
+    Optional<UserTokens> findByUserId(int userId);
 
-    Integer deleteByUserId(Long userId);
+    Integer deleteByUserId(int userId);
 }

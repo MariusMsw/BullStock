@@ -40,7 +40,7 @@ public class JwtService {
         return createToken(
                 claims,
                 user.getEmail(),
-                System.currentTimeMillis() - TimeUnit.DAYS.toMillis(ACCESS_TOKEN_EXPIRATION_MILLIS)
+                System.currentTimeMillis() + TimeUnit.DAYS.toMillis(ACCESS_TOKEN_EXPIRATION_MILLIS)
         );
     }
 

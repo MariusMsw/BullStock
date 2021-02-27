@@ -1,13 +1,11 @@
 package com.mariusmihai.banchelors.BullStock.controllers;
 
-import com.mariusmihai.banchelors.BullStock.dtos.auth.LoginRequest;
-import com.mariusmihai.banchelors.BullStock.dtos.auth.RefreshTokenRequest;
-import com.mariusmihai.banchelors.BullStock.dtos.auth.RegisterRequest;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.UserDto;
 import com.mariusmihai.banchelors.BullStock.services.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -15,31 +13,35 @@ import java.util.List;
 @RequestMapping("/user")
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
-    @GetMapping
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @GetMapping("/all")
     public ResponseEntity<List<UserDto>> geAllUsers() {
         return this.userService.getAllUsers();
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<Object> registerUser(@RequestBody RegisterRequest registerRequest) {
-        return this.userService.registerUser(registerRequest);
+    @GetMapping
+    public ResponseEntity<Object> getLoggedInUser() {
+        return this.userService.getLoggedInUser();
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<Object> loginUser(@RequestBody LoginRequest loginRequest) {
-        return this.userService.loginUser(loginRequest);
+    @GetMapping("/statistics")
+    public ResponseEntity<Object> getStatistics() {
+        return this.userService.getStatistics();
     }
 
-    @PostMapping("/logout/{userId}")
-    public ResponseEntity<Object> logoutUser(@PathVariable Long userId) {
-        return this.userService.logoutUser(userId);
+    @GetMapping("/favorite")
+    public ResponseEntity<Object> getFavoriteStocks() {
+        return this.userService.getFavorite();
     }
 
-    @PostMapping("/refreshToken")
-    public ResponseEntity<Object> refreshToken(@RequestBody RefreshTokenRequest refreshTokenRequest) {
-        return this.userService.refreshToken(refreshTokenRequest);
+    @GetMapping("/portofolio")
+    public ResponseEntity<Object> getPortofolioStocks() {
+        return this.userService.getPortofolioStocks();
     }
+
 }

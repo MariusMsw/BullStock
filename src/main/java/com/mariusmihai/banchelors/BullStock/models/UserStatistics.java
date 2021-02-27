@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 import javax.persistence.*;
-import java.io.Serializable;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -15,15 +15,15 @@ import java.io.Serializable;
 @Builder
 @Accessors(chain = true)
 @Entity
-@Table(name = "users")
-public class User implements Serializable {
+@Table(name = "user_statistics")
+public class UserStatistics {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-    private String firstName;
-    private String lastName;
-    private String email;
-    private String password;
-    @OneToOne(cascade = CascadeType.ALL)
-    private UserStatistics userStatistics;
+    private double profit;
+    private double portofolioValue;
+    private double balance;
+    @OneToMany
+    private List<Stock> favoriteStocks;
 }

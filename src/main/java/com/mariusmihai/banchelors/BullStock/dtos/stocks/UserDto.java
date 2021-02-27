@@ -1,5 +1,6 @@
 package com.mariusmihai.banchelors.BullStock.dtos.stocks;
 
+import com.mariusmihai.banchelors.BullStock.models.UserStatistics;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,8 +14,9 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class UserDto {
 
-    private Long id;
+    private int id;
     private String firstName;
     private String lastName;
     private String email;
+    private UserStatistics userStatistics;
 }
