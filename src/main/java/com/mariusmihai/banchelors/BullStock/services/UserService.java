@@ -1,5 +1,6 @@
 package com.mariusmihai.banchelors.BullStock.services;
 
+import com.mariusmihai.banchelors.BullStock.dtos.stocks.BasicStockDto;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.UserDto;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.UserHistory;
 import com.mariusmihai.banchelors.BullStock.models.Stock;
@@ -23,18 +24,21 @@ public class UserService {
     private final UserStockPortofolioRepository userStockPortofolioRepository;
     private final TransactionRepository transactionRepository;
     private final UserTransactionRepository userTransactionRepository;
+    private final StockRepository stockRepository;
 
     @Autowired
     public UserService(UserRepository userRepository,
                        UserStatisticsRepository userStatisticsRepository,
                        UserStockPortofolioRepository userStockPortofolioRepository,
                        TransactionRepository transactionRepository,
-                       UserTransactionRepository userTransactionRepository) {
+                       UserTransactionRepository userTransactionRepository,
+                       StockRepository stockRepository) {
         this.userRepository = userRepository;
         this.userStatisticsRepository = userStatisticsRepository;
         this.userStockPortofolioRepository = userStockPortofolioRepository;
         this.transactionRepository = transactionRepository;
         this.userTransactionRepository = userTransactionRepository;
+        this.stockRepository = stockRepository;
     }
 
     public ResponseEntity<List<UserDto>> getAllUsers() {
@@ -45,7 +49,8 @@ public class UserService {
                     .setId(user.getId())
                     .setEmail(user.getEmail())
                     .setFirstName(user.getFirstName())
-                    .setLastName(user.getLastName());
+                    .setLastName(user.getLastName())
+                    .setUserStatistics(user.getUserStatistics());
             usersDto.add(userDto);
         }
         return new ResponseEntity<>(usersDto, HttpStatus.OK);
@@ -74,12 +79,24 @@ public class UserService {
         try {
             var user = getLoggedUser();
             if (null != user) {
+                var response = new ArrayList<BasicStockDto>();
                 var favorites = user.getUserStatistics()
                         .getFavoriteStocks()
                         .stream()
                         .sorted(Comparator.comparing(Stock::getSymbol))
                         .collect(Collectors.toList());
-                return new ResponseEntity<>(user.getUserStatistics().getFavoriteStocks(), HttpStatus.OK);
+                for (var favoriteStock : favorites) {
+                    var basicFavoriteStockDto = new BasicStockDto()
+                            .setFavorite(true)
+                            .setAsk(favoriteStock.getAsk())
+                            .setBid(favoriteStock.getBid())
+                            .setId(favoriteStock.getId())
+                            .setName(favoriteStock.getName())
+                            .setPriceChangeLastDay(favoriteStock.getPriceChangeLastDay())
+                            .setSymbol(favoriteStock.getSymbol());
+                    response.add(basicFavoriteStockDto);
+                }
+                return new ResponseEntity<>(response, HttpStatus.OK);
             }
             logMap.put("message", "Could not fetch favorite stocks");
             return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
@@ -161,6 +178,34 @@ public class UserService {
         }
     }
 
+    public ResponseEntity<Object> addFavoriteStock(String symbol) {
+        Map<String, Object> logMap = new HashMap<>();
+        try {
+            var user = getLoggedUser();
+            if (null != user) {
+                var stock = this.stockRepository.findBySymbol(symbol);
+                if (stock.isEmpty()) {
+                    logMap.put("message", "This stock does not exists");
+                    return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
+                }
+                var alreadyFavorites = user.getUserStatistics().getFavoriteStocks();
+                if (alreadyFavorites.contains(stock.get())) {
+                    logMap.put("message", "This stock is already favorite");
+                    return new ResponseEntity<>(logMap, HttpStatus.CONFLICT);
+                }
+                alreadyFavorites.add(stock.get());
+                user.getUserStatistics().setFavoriteStocks(alreadyFavorites);
+                return new ResponseEntity<>(userRepository.save(user), HttpStatus.OK);
+            }
+            logMap.put("message", "Could not add this stock as favorite");
+            return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            logMap.put("message", "An error has occurred. Please try again later.");
+            System.out.println(e.getMessage());
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     private User getLoggedUser() {
         try {
             var emailOptional = Helpers.getCurrentUserEmail();
@@ -176,5 +221,4 @@ public class UserService {
         }
         return null;
     }
-
 }

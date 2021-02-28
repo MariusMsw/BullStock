@@ -35,4 +35,6 @@ public class Stock {
     private double priceChangeLastDay;
     @Enumerated(EnumType.STRING)
     private Currency currency;
+    @Transient
+    private boolean isFavorite;
 }
