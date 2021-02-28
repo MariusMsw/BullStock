@@ -4,11 +4,11 @@ import com.mariusmihai.banchelors.BullStock.dtos.auth.LoginRequest;
 import com.mariusmihai.banchelors.BullStock.dtos.auth.RefreshTokenRequest;
 import com.mariusmihai.banchelors.BullStock.dtos.auth.RegisterRequest;
 import com.mariusmihai.banchelors.BullStock.services.AuthService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.security.Principal;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/auth")

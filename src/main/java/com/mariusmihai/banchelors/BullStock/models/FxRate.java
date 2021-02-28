@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 import javax.persistence.*;
-import java.io.Serializable;
+import java.time.Instant;
 
 @Data
 @AllArgsConstructor
@@ -16,17 +16,16 @@ import java.io.Serializable;
 @Builder
 @Accessors(chain = true)
 @Entity
-@Table(name = "users")
-public class User implements Serializable {
+@Table(name = "fx_rate")
+public class FxRate {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-    private String firstName;
-    private String lastName;
-    private String email;
-    private String password;
-    @OneToOne(cascade = CascadeType.ALL)
-    private UserStatistics userStatistics;
     @Enumerated(value = EnumType.STRING)
-    private Currency currency;
+    private Currency baseCurrency;
+    @Enumerated(value = EnumType.STRING)
+    private Currency toCurrency;
+    private double conversionRate;
+    private Instant fetchTime;
 }
