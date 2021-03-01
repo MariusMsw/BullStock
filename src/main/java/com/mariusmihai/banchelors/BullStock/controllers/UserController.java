@@ -1,5 +1,6 @@
 package com.mariusmihai.banchelors.BullStock.controllers;
 
+import com.mariusmihai.banchelors.BullStock.dtos.stocks.TradeStockDto;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.UserDto;
 import com.mariusmihai.banchelors.BullStock.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +49,11 @@ public class UserController {
     @PostMapping("/favorite/{symbol}")
     public ResponseEntity<Object> addFavoriteStock(@PathVariable("symbol") String symbol) {
         return this.userService.addFavoriteStock(symbol);
+    }
+
+    @PostMapping("/stock")
+    public ResponseEntity<Object> buyStock(@RequestBody TradeStockDto request) {
+        return this.userService.buyStock(request);
     }
 
 }

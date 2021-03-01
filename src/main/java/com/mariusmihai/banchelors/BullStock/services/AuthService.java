@@ -11,6 +11,7 @@ import com.mariusmihai.banchelors.BullStock.repositories.TokensRepository;
 import com.mariusmihai.banchelors.BullStock.repositories.UserRepository;
 import com.mariusmihai.banchelors.BullStock.security.AppUserDetailsService;
 import com.mariusmihai.banchelors.BullStock.security.UserPrincipal;
+import com.mariusmihai.banchelors.BullStock.utils.Currency;
 import com.mariusmihai.banchelors.BullStock.utils.Helpers;
 import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,7 +70,7 @@ public class AuthService {
                     .lastName(registerRequest.getLastName())
                     .email(registerRequest.getEmail())
                     .password(BCrypt.hashpw(registerRequest.getPassword(), BCrypt.gensalt()))
-                    .currency(registerRequest.getCurrency())
+                    .currency(registerRequest.getCurrency() == null ? Currency.EUR : registerRequest.getCurrency())
                     .userStatistics(userStatistics)
                     .build();
             userRepository.save(newUser);

@@ -1,6 +1,5 @@
 package com.mariusmihai.banchelors.BullStock.models;
 
-import com.mariusmihai.banchelors.BullStock.utils.Currency;
 import com.mariusmihai.banchelors.BullStock.utils.TransactionType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,23 +15,20 @@ import javax.persistence.*;
 @Builder
 @Accessors(chain = true)
 @Entity
-@Table(name = "transaction")
-public class Transaction {
-
+@Table(name = "history")
+public class History {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-    @OneToOne
-    private Stock stock;
-    private long openDate;
-    private long closeDate;
-    @Enumerated(value = EnumType.STRING)
-    private TransactionType type;
+    private String symbol;
+    private int userId;
     private int volume;
-    private double closePrice;
+    private int transactionId;
+    private TransactionType type;
+    private Long openDate;
+    private Long closeDate;
+    private double profit;
     private double openPrice;
-    @Enumerated(value = EnumType.STRING)
-    private Currency currency;
-    private double exchangeRate;
-    private double totalPricePayed;
+    private double closePrice;
+
 }

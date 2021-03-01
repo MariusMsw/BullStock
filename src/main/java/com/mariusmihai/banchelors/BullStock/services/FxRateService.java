@@ -31,9 +31,17 @@ public class FxRateService {
     @Scheduled(fixedRate = 6000000)
     @Transactional
     public void fetchCurrencyRates() {
+        String url = "";
         for (var currency : Currency.values()) {
+            if (currency.equals(Currency.EUR)) {
+                url = "https://api.exchangeratesapi.io/latest?symbols=USD,RON&base=";
+                this.fxRateRepository.deleteByBaseCurrencyAndToCurrency(currency, currency);
+                this.fxRateRepository.save(new FxRate().setBaseCurrency(currency).setConversionRate(1.0).setFetchTime(Instant.now()).setToCurrency(currency));
+            } else {
+                url = "https://api.exchangeratesapi.io/latest?symbols=EUR,USD,RON&base=";
+            }
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.exchangeratesapi.io/latest?symbols=EUR,USD,RON&base=" + currency))
+                    .uri(URI.create(url + currency))
                     .GET()
                     .build();
             try {
