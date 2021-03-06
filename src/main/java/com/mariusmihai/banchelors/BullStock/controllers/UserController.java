@@ -51,9 +51,19 @@ public class UserController {
         return this.userService.addFavoriteStock(symbol);
     }
 
+    @DeleteMapping("/favorite/{symbol}")
+    public ResponseEntity<Object> removeFavoriteStock(@PathVariable("symbol") String symbol) {
+        return this.userService.removeFavoriteStock(symbol);
+    }
+
     @PostMapping("/stock")
     public ResponseEntity<Object> buyStock(@RequestBody TradeStockDto request) {
         return this.userService.buyStock(request);
+    }
+
+    @DeleteMapping("/stock")
+    public ResponseEntity<Object> sellStock(@RequestBody TradeStockDto request) {
+        return this.userService.sellStock(request);
     }
 
 }

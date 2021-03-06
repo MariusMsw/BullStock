@@ -35,4 +35,5 @@ public class Transaction {
     private Currency currency;
     private double exchangeRate;
     private double totalPricePayed;
+    private double profitMade;
 }

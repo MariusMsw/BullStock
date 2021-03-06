@@ -24,6 +24,7 @@ public class UserStockPortofolio {
     private Stock stock;
     @OneToOne
     private User user;
+    private double averagePrice;
     private int volume;
     private double profit;
     private double yield;

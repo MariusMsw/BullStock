@@ -3,7 +3,6 @@ package com.mariusmihai.banchelors.BullStock.services;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.BasicStockDto;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.TradeStockDto;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.UserDto;
-import com.mariusmihai.banchelors.BullStock.dtos.stocks.UserHistory;
 import com.mariusmihai.banchelors.BullStock.models.*;
 import com.mariusmihai.banchelors.BullStock.repositories.*;
 import com.mariusmihai.banchelors.BullStock.utils.Helpers;
@@ -119,7 +118,7 @@ public class UserService {
         try {
             var user = getLoggedUser();
             if (null != user) {
-                var portofolio = this.userStockPortofolioRepository.getPortofolio();
+                var portofolio = this.userStockPortofolioRepository.getPortofolio(user.getId());
                 return new ResponseEntity<>(portofolio, HttpStatus.OK);
             }
             logMap.put("message", "Could not fetch portofolio");
@@ -199,6 +198,34 @@ public class UserService {
         }
     }
 
+    public ResponseEntity<Object> removeFavoriteStock(String symbol) {
+        Map<String, Object> logMap = new HashMap<>();
+        try {
+            var user = getLoggedUser();
+            if (null != user) {
+                var stock = this.stockRepository.findBySymbol(symbol);
+                if (stock.isEmpty()) {
+                    logMap.put("message", "This stock does not exists");
+                    return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
+                }
+                var favoriteStocks = user.getUserStatistics().getFavoriteStocks();
+                if (!favoriteStocks.contains(stock.get())) {
+                    logMap.put("message", "This stock is not favorite");
+                    return new ResponseEntity<>(logMap, HttpStatus.BAD_REQUEST);
+                }
+                favoriteStocks.remove(stock.get());
+                user.getUserStatistics().setFavoriteStocks(favoriteStocks);
+                return new ResponseEntity<>(userRepository.save(user), HttpStatus.OK);
+            }
+            logMap.put("message", "Could not remove this stock from favorite");
+            return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            logMap.put("message", "An error has occurred. Please try again later.");
+            System.out.println(e.getMessage());
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @Transactional
     public ResponseEntity<Object> buyStock(TradeStockDto request) {
         Map<String, Object> logMap = new HashMap<>();
@@ -217,37 +244,18 @@ public class UserService {
                     logMap.put("message", "Insufficient funds");
                     return new ResponseEntity<>(logMap, HttpStatus.BAD_REQUEST);
                 }
-                var transaction = new Transaction()
-                        .setCurrency(user.getCurrency())
-                        .setExchangeRate(exchangeRate)
-                        .setOpenDate(Instant.now().toEpochMilli())
-                        .setOpenPrice(stockOptional.get().getBid() * (exchangeRate + commission))
-                        .setStock(stockOptional.get())
-                        .setType(TransactionType.BUY)
-                        .setVolume(request.getVolume())
-                        .setTotalPricePayed(request.getVolume() * stockOptional.get().getBid() * (exchangeRate + commission));
+                Transaction transaction = createBuyTransaction(request, user, stockOptional.get(), exchangeRate, commission);
+
                 var userTransaction = new UserTransaction().setTransaction(transaction).setUser(user);
                 user.getUserStatistics().setBalance(user.getUserStatistics().getBalance() - transaction.getTotalPricePayed());
-                user.getUserStatistics().setPortofolioValue(user.getUserStatistics().getPortofolioValue() + transaction.getTotalPricePayed());
-                var userStockPortofolio = new UserStockPortofolio().setStock(stockOptional.get()).setUser(user)
-                        .setVolume(request.getVolume()).setProfit(0).setYield(0);
-                var userHistoryItem = new History()
-                        .setCloseDate(userTransaction.getTransaction().getCloseDate())
-                        .setClosePrice(userTransaction.getTransaction().getClosePrice())
-                        .setOpenDate(userTransaction.getTransaction().getOpenDate())
-                        .setOpenPrice(userTransaction.getTransaction().getOpenPrice())
-                        .setProfit(0)
-                        .setUserId(user.getId())
-                        .setSymbol(userTransaction.getTransaction().getStock().getSymbol())
-                        .setTransactionId(userTransaction.getTransaction().getId())
-                        .setVolume(userTransaction.getTransaction().getVolume())
-                        .setType(userTransaction.getTransaction().getType());
-                this.transactionRepository.save(transaction);
-                this.userTransactionRepository.save(userTransaction);
-                this.userRepository.save(user);
-                this.userStockPortofolioRepository.save(userStockPortofolio);
-                this.userStatisticsRepository.save(user.getUserStatistics());
-                this.userHistoryRepository.save(userHistoryItem);
+                user.getUserStatistics().setPortofolioValue(user.getUserStatistics().getPortofolioValue()
+                        + request.getVolume() * stockOptional.get().getBid() * exchangeRate);
+
+
+                UserStockPortofolio userStockPortofolio = createOrUpdateUserStockPortofolioForBuyType(user, stockOptional.get(), transaction.getVolume(),
+                        userTransaction);
+                persistTransaction(user, transaction, userTransaction, userStockPortofolio);
+
                 logMap.put("message", "Stock bought");
                 return new ResponseEntity<>(logMap, HttpStatus.OK);
             }
@@ -259,6 +267,138 @@ public class UserService {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    public ResponseEntity<Object> sellStock(TradeStockDto request) {
+        Map<String, Object> logMap = new HashMap<>();
+        try {
+            var user = getLoggedUser();
+            if (null != user) {
+                var stockOptional = this.stockRepository.findBySymbol(request.getSymbol());
+                if (stockOptional.isEmpty()) {
+                    logMap.put("message", "This symbol does not exists in DB");
+                    return new ResponseEntity<>(logMap, HttpStatus.BAD_REQUEST);
+                }
+                if (!userHasStock(user.getId(), stockOptional.get())) {
+                    logMap.put("message", "User can not sell this stock");
+                    return new ResponseEntity<>(logMap, HttpStatus.BAD_REQUEST);
+                }
+                var userStockPortofolioOptional = this.userStockPortofolioRepository.getPortofolio(user.getId())
+                        .stream().filter(stockFromPortofolio -> stockFromPortofolio.getStock().equals(stockOptional.get())).findAny();
+                if (userStockPortofolioOptional.isEmpty()) {
+                    throw new Exception("Stock does not exists in portofolio");
+                }
+                if (request.getVolume() > userStockPortofolioOptional.get().getVolume()) {
+                    logMap.put("message", "Can not sell this volume");
+                    return new ResponseEntity<>(logMap, HttpStatus.BAD_REQUEST);
+                }
+                var exchangeRate = this.fxRateRepository.findConversionRateByBaseCurrencyAndToCurrency(stockOptional.get().getCurrency(), user.getCurrency());
+                var commission = user.getCurrency().equals(stockOptional.get().getCurrency()) ? 0 : 0.005;
+                Transaction transaction = createSellTransaction(request, user, stockOptional.get(), exchangeRate, commission, userStockPortofolioOptional.get());
+
+                user.getUserStatistics().setBalance(user.getUserStatistics().getBalance() +
+                        request.getVolume() * transaction.getClosePrice() - request.getVolume() * transaction.getClosePrice() * commission * exchangeRate);
+                user.getUserStatistics().setPortofolioValue(user.getUserStatistics().getPortofolioValue()
+                        - request.getVolume() * transaction.getClosePrice());
+                var userTransaction = new UserTransaction().setTransaction(transaction).setUser(user);
+
+                var userStockPortofolio = userStockPortofolioOptional.get()
+                        .setVolume(userStockPortofolioOptional.get().getVolume() - request.getVolume());
+                persistTransaction(user, transaction, userTransaction, userStockPortofolio);
+                logMap.put("message", "Stock sold");
+                return new ResponseEntity<>(logMap, HttpStatus.OK);
+            }
+            logMap.put("message", "Could not sell this stock");
+            return new ResponseEntity<>(logMap, HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            logMap.put("message", "An error has occurred. Please try again later.");
+            System.out.println(e.getMessage());
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void persistTransaction(User user, Transaction transaction, UserTransaction userTransaction, UserStockPortofolio userStockPortofolio) {
+        this.userStockPortofolioRepository.save(userStockPortofolio);
+
+        var transactionId = this.transactionRepository.save(transaction).getId();
+        this.userRepository.save(user);
+        this.userTransactionRepository.save(userTransaction);
+        this.userStatisticsRepository.save(user.getUserStatistics());
+        userTransaction.getTransaction().setId(transactionId);
+        History userHistoryItem = createHistory(user, userTransaction, userStockPortofolio.getAveragePrice(), transaction.getType());
+        this.userHistoryRepository.save(userHistoryItem);
+    }
+
+    private UserStockPortofolio createOrUpdateUserStockPortofolioForBuyType(User user, Stock stock, int volume,
+                                                                            UserTransaction userTransaction) {
+        var userStockPortofolioOptional = this.userStockPortofolioRepository.getPortofolio(user.getId())
+                .stream().filter(stockFromPortofolio -> stockFromPortofolio.getStock().equals(stock)).findAny();
+        UserStockPortofolio userStockPortofolio;
+        if (userStockPortofolioOptional.isPresent()) {
+            userStockPortofolio = userStockPortofolioOptional.get();
+            userStockPortofolio.setVolume(userStockPortofolio.getVolume() + volume)
+                    .setAveragePrice((userStockPortofolio.getAveragePrice() + userTransaction.getTransaction().getOpenPrice()) / 2);
+        } else {
+            userStockPortofolio = new UserStockPortofolio()
+                    .setYield(0).setProfit(0).setVolume(volume).setUser(user)
+                    .setStock(stock).setAveragePrice(userTransaction.getTransaction().getStock().getBid());
+        }
+        return userStockPortofolio;
+    }
+
+    private boolean userHasStock(int userId, Stock stock) {
+        var portofolioStocks = this.userStockPortofolioRepository.getPortofolio(userId);
+        for (UserStockPortofolio portofolioStock : portofolioStocks) {
+            if (portofolioStock.getStock().equals(stock)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private History createHistory(User user, UserTransaction userTransaction, double averagePrice, TransactionType transactionType) {
+        var openPrice = transactionType == TransactionType.BUY ? userTransaction.getTransaction().getOpenPrice() :
+                averagePrice;
+        return new History()
+                .setCloseDate(userTransaction.getTransaction().getCloseDate())
+                .setClosePrice(userTransaction.getTransaction().getClosePrice())
+                .setOpenDate(userTransaction.getTransaction().getOpenDate())
+                .setOpenPrice(openPrice)
+                .setProfit(userTransaction.getTransaction().getProfitMade())
+                .setUserId(user.getId())
+                .setSymbol(userTransaction.getTransaction().getStock().getSymbol())
+                .setTransactionId(userTransaction.getTransaction().getId())
+                .setVolume(userTransaction.getTransaction().getVolume())
+                .setType(userTransaction.getTransaction().getType());
+    }
+
+    private Transaction createBuyTransaction(TradeStockDto request, User user, Stock stock, double exchangeRate,
+                                             double commission) {
+        return new Transaction()
+                .setCurrency(user.getCurrency())
+                .setExchangeRate(exchangeRate)
+                .setOpenDate(Instant.now().toEpochMilli())
+                .setOpenPrice(stock.getBid() * (exchangeRate + commission))
+                .setStock(stock)
+                .setType(TransactionType.BUY)
+                .setVolume(request.getVolume())
+                .setTotalPricePayed(request.getVolume() * stock.getBid() * (exchangeRate + commission));
+    }
+
+    private Transaction createSellTransaction(TradeStockDto request, User user, Stock stock, double exchangeRate,
+                                              double commission, UserStockPortofolio userStockPortofolio) {
+
+        return new Transaction()
+                .setCurrency(user.getCurrency())
+                .setExchangeRate(exchangeRate)
+                .setCloseDate(Instant.now().toEpochMilli())
+                .setClosePrice(stock.getAsk() * (exchangeRate + commission))
+                .setStock(stock)
+                .setType(TransactionType.SELL)
+                .setVolume(request.getVolume())
+                .setProfitMade((request.getVolume() * stock.getAsk() * exchangeRate)
+                        - (request.getVolume() * userStockPortofolio.getAveragePrice()));
+    }
+
 
     private User getLoggedUser() {
         try {
