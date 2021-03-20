@@ -1,12 +1,15 @@
 package com.mariusmihai.banchelors.BullStock.services;
 
 import com.mariusmihai.banchelors.BullStock.models.User;
+import com.mariusmihai.banchelors.BullStock.repositories.TokensRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -20,8 +23,16 @@ public class JwtService {
     private final Long ACCESS_TOKEN_EXPIRATION_MILLIS = TimeUnit.DAYS.toMillis(7);
     private final Long REFRESH_TOKEN_EXPIRATION_MILLIS = TimeUnit.DAYS.toMillis(14);
 
+    @Autowired
+    private TokensRepository tokensRepository;
+
+    @Transactional
     public Boolean isTokenExpired(String token) {
-        return extractClaim(token, Claims::getExpiration).before(new Date());
+        if (extractClaim(token, Claims::getExpiration).before(new Date())) {
+            this.tokensRepository.deleteByAccessToken(token);
+        }
+        var tokenFromDb = this.tokensRepository.findByAccessToken(token);
+        return tokenFromDb.isEmpty();
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {

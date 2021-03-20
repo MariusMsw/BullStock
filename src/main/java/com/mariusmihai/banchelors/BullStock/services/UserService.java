@@ -28,6 +28,7 @@ public class UserService {
     private final StockRepository stockRepository;
     private final FxRateRepository fxRateRepository;
     private final UserHistoryRepository userHistoryRepository;
+    private final StockService stockService;
 
     @Autowired
     public UserService(UserRepository userRepository,
@@ -36,7 +37,8 @@ public class UserService {
                        TransactionRepository transactionRepository,
                        UserTransactionRepository userTransactionRepository,
                        StockRepository stockRepository,
-                       FxRateRepository fxRateRepository, UserHistoryRepository userHistoryRepository) {
+                       FxRateRepository fxRateRepository, UserHistoryRepository userHistoryRepository,
+                       StockService stockService) {
         this.userRepository = userRepository;
         this.userStatisticsRepository = userStatisticsRepository;
         this.userStockPortofolioRepository = userStockPortofolioRepository;
@@ -45,6 +47,7 @@ public class UserService {
         this.stockRepository = stockRepository;
         this.fxRateRepository = fxRateRepository;
         this.userHistoryRepository = userHistoryRepository;
+        this.stockService = stockService;
     }
 
     public ResponseEntity<List<UserDto>> getAllUsers() {
@@ -68,6 +71,7 @@ public class UserService {
         try {
             var user = getLoggedUser();
             if (null != user) {
+                this.stockService.calculateUserProfit(user);
                 return new ResponseEntity<>(user.getUserStatistics(), HttpStatus.OK);
             }
             logMap.put("message", "Could not fetch statistics");
@@ -85,6 +89,7 @@ public class UserService {
         try {
             var user = getLoggedUser();
             if (null != user) {
+                this.stockService.calculateUserProfit(user);
                 var response = new ArrayList<BasicStockDto>();
                 var favorites = user.getUserStatistics()
                         .getFavoriteStocks()
@@ -118,6 +123,7 @@ public class UserService {
         try {
             var user = getLoggedUser();
             if (null != user) {
+                this.stockService.calculateUserProfit(user);
                 var portofolio = this.userStockPortofolioRepository.getPortofolio(user.getId());
                 return new ResponseEntity<>(portofolio, HttpStatus.OK);
             }
@@ -240,7 +246,7 @@ public class UserService {
                 var exchangeRate = this.fxRateRepository.findConversionRateByBaseCurrencyAndToCurrency(stockOptional.get().getCurrency(), user.getCurrency());
                 var commission = user.getCurrency().equals(stockOptional.get().getCurrency()) ? 0 : 0.005;
 
-                if (user.getUserStatistics().getBalance() < (request.getVolume() * stockOptional.get().getBid() * (exchangeRate + commission))) {
+                if (user.getUserStatistics().getBalance() < (request.getVolume() * stockOptional.get().getAsk() * (exchangeRate + commission))) {
                     logMap.put("message", "Insufficient funds");
                     return new ResponseEntity<>(logMap, HttpStatus.BAD_REQUEST);
                 }
@@ -249,7 +255,7 @@ public class UserService {
                 var userTransaction = new UserTransaction().setTransaction(transaction).setUser(user);
                 user.getUserStatistics().setBalance(user.getUserStatistics().getBalance() - transaction.getTotalPricePayed());
                 user.getUserStatistics().setPortofolioValue(user.getUserStatistics().getPortofolioValue()
-                        + request.getVolume() * stockOptional.get().getBid() * exchangeRate);
+                        + request.getVolume() * stockOptional.get().getAsk() * exchangeRate);
 
 
                 UserStockPortofolio userStockPortofolio = createOrUpdateUserStockPortofolioForBuyType(user, stockOptional.get(), transaction.getVolume(),
@@ -268,6 +274,7 @@ public class UserService {
         }
     }
 
+    @Transactional
     public ResponseEntity<Object> sellStock(TradeStockDto request) {
         Map<String, Object> logMap = new HashMap<>();
         try {
@@ -298,12 +305,15 @@ public class UserService {
                 user.getUserStatistics().setBalance(user.getUserStatistics().getBalance() +
                         request.getVolume() * transaction.getClosePrice() - request.getVolume() * transaction.getClosePrice() * commission * exchangeRate);
                 user.getUserStatistics().setPortofolioValue(user.getUserStatistics().getPortofolioValue()
-                        - request.getVolume() * transaction.getClosePrice());
+                        - request.getVolume() * stockOptional.get().getAsk() * exchangeRate);
                 var userTransaction = new UserTransaction().setTransaction(transaction).setUser(user);
 
                 var userStockPortofolio = userStockPortofolioOptional.get()
                         .setVolume(userStockPortofolioOptional.get().getVolume() - request.getVolume());
                 persistTransaction(user, transaction, userTransaction, userStockPortofolio);
+                if (userStockPortofolio.getVolume() == 0) {
+                    this.userStockPortofolioRepository.delete(userStockPortofolio);
+                }
                 logMap.put("message", "Stock sold");
                 return new ResponseEntity<>(logMap, HttpStatus.OK);
             }
@@ -340,7 +350,7 @@ public class UserService {
         } else {
             userStockPortofolio = new UserStockPortofolio()
                     .setYield(0).setProfit(0).setVolume(volume).setUser(user)
-                    .setStock(stock).setAveragePrice(userTransaction.getTransaction().getStock().getBid());
+                    .setStock(stock).setAveragePrice(userTransaction.getTransaction().getStock().getAsk());
         }
         return userStockPortofolio;
     }
@@ -377,11 +387,11 @@ public class UserService {
                 .setCurrency(user.getCurrency())
                 .setExchangeRate(exchangeRate)
                 .setOpenDate(Instant.now().toEpochMilli())
-                .setOpenPrice(stock.getBid() * (exchangeRate + commission))
+                .setOpenPrice(stock.getAsk())
                 .setStock(stock)
                 .setType(TransactionType.BUY)
                 .setVolume(request.getVolume())
-                .setTotalPricePayed(request.getVolume() * stock.getBid() * (exchangeRate + commission));
+                .setTotalPricePayed(request.getVolume() * stock.getAsk() * (commission + exchangeRate));
     }
 
     private Transaction createSellTransaction(TradeStockDto request, User user, Stock stock, double exchangeRate,

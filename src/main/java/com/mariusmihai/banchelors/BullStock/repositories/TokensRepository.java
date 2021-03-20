@@ -11,5 +11,9 @@ public interface TokensRepository extends CrudRepository<UserTokens, Long> {
 
     Optional<UserTokens> findByUserId(int userId);
 
+    Optional<UserTokens> findByAccessToken(String accessToken);
+
+    void deleteByAccessToken(String accessToken);
+
     Integer deleteByUserId(int userId);
 }

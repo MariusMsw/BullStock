@@ -37,4 +37,6 @@ public class Stock {
     private Currency currency;
     @Transient
     private boolean isFavorite;
+    private double lastUpdatedPrice;
+
 }

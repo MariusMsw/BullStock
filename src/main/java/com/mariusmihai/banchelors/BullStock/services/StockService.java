@@ -3,17 +3,18 @@ package com.mariusmihai.banchelors.BullStock.services;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.BasicStockDto;
 import com.mariusmihai.banchelors.BullStock.models.Stock;
 import com.mariusmihai.banchelors.BullStock.models.User;
+import com.mariusmihai.banchelors.BullStock.models.UserStatistics;
 import com.mariusmihai.banchelors.BullStock.repositories.StockRepository;
 import com.mariusmihai.banchelors.BullStock.repositories.UserRepository;
+import com.mariusmihai.banchelors.BullStock.repositories.UserStatisticsRepository;
+import com.mariusmihai.banchelors.BullStock.repositories.UserStockPortofolioRepository;
 import com.mariusmihai.banchelors.BullStock.utils.Helpers;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,10 +22,45 @@ public class StockService {
 
     private final StockRepository stockRepository;
     private final UserRepository userRepository;
+    private final UserStockPortofolioRepository userStockPortofolioRepository;
+    private List<Stock> allStocks;
 
-    public StockService(StockRepository stockRepository, UserRepository userRepository) {
+    public StockService(StockRepository stockRepository, UserRepository userRepository, UserStockPortofolioRepository userStockPortofolioRepository) {
         this.stockRepository = stockRepository;
         this.userRepository = userRepository;
+        this.userStockPortofolioRepository = userStockPortofolioRepository;
+    }
+
+    public void calculateUserProfit(User user) {
+        var userPortofolioValue = user.getUserStatistics().getPortofolioValue();
+        double userProfit = 0;
+
+        var userStockPortofolioList = this.userStockPortofolioRepository.getPortofolio(user.getId());
+        if (userStockPortofolioList.isEmpty()) {
+            user.getUserStatistics().setProfit(0);
+            user.getUserStatistics().setPortofolioValue(0);
+            this.userRepository.save(user);
+            return;
+        }
+        for (var userStockPortofolio : userStockPortofolioList) {
+            var updatedStock = this.stockRepository.findBySymbol(userStockPortofolio.getStock().getSymbol()).get();
+
+            if (updatedStock.getLastUpdatedPrice() == updatedStock.getAsk()) {
+                continue;
+            }
+            userStockPortofolio.setProfit(userStockPortofolio.getVolume() * (updatedStock.getAsk() - userStockPortofolio.getAveragePrice()));
+            var sign = 1;
+            if (updatedStock.getAsk() > userStockPortofolio.getAveragePrice()) sign = -1;
+            userStockPortofolio.setYield(((updatedStock.getAsk() - userStockPortofolio.getAveragePrice()) / Math.abs(userStockPortofolio.getAveragePrice())) * 100 * sign);
+            userPortofolioValue += userStockPortofolio.getProfit();
+            userStockPortofolio.getUser().getUserStatistics().setPortofolioValue(userPortofolioValue);
+            userProfit += userStockPortofolio.getProfit();
+            updatedStock.setLastUpdatedPrice(updatedStock.getAsk());
+            this.userStockPortofolioRepository.save(userStockPortofolio);
+            this.stockRepository.save(updatedStock);
+        }
+        user.getUserStatistics().setProfit(userProfit == 0 ? user.getUserStatistics().getProfit() : userProfit);
+        this.userRepository.save(user);
     }
 
     public ResponseEntity<Object> getWinners() {
@@ -148,6 +184,10 @@ public class StockService {
             response.add(basicFavoriteStockDto);
         }
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private Stock getStock(String symbol) {
+        return this.allStocks.stream().filter(stock -> stock.getSymbol().equals(symbol)).findFirst().orElse(null);
     }
 
 }

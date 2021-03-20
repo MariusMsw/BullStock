@@ -1,9 +1,6 @@
 package com.mariusmihai.banchelors.BullStock.services;
 
-import com.mariusmihai.banchelors.BullStock.dtos.auth.AuthResponse;
-import com.mariusmihai.banchelors.BullStock.dtos.auth.LoginRequest;
-import com.mariusmihai.banchelors.BullStock.dtos.auth.RefreshTokenRequest;
-import com.mariusmihai.banchelors.BullStock.dtos.auth.RegisterRequest;
+import com.mariusmihai.banchelors.BullStock.dtos.auth.*;
 import com.mariusmihai.banchelors.BullStock.models.UserStatistics;
 import com.mariusmihai.banchelors.BullStock.models.UserTokens;
 import com.mariusmihai.banchelors.BullStock.models.User;
@@ -21,6 +18,7 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.bcrypt.BCrypt;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
@@ -61,6 +59,7 @@ public class AuthService {
                 return new ResponseEntity<>(logMap, HttpStatus.CONFLICT);
             }
             var userStatistics = new UserStatistics()
+                    .setBalance(5000)
                     .setPortofolioValue(0)
                     .setProfit(0)
                     .setFavoriteStocks(List.of());
@@ -171,5 +170,29 @@ public class AuthService {
             return new ResponseEntity<>(logMap, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
+    }
+
+    public ResponseEntity<Object> changePassword(ChangePasswordDto passwords) {
+        Map<String, Object> logMap = new HashMap<>();
+        try {
+            var userEmail = Helpers.getCurrentUserEmail();
+            if (userEmail.isEmpty()) {
+                logMap.put("message", "This user has no valid tokens!");
+                return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
+            }
+            var encoder = new BCryptPasswordEncoder();
+            var userOptional = this.userRepository.findByEmailAndPassword(userEmail.get(), passwords.getOldPassword());
+            if (userOptional.isPresent()) {
+                var user = userOptional.get();
+                user.setPassword(encoder.encode(passwords.getNewPassword()));
+                return new ResponseEntity<>(userRepository.save(user), HttpStatus.OK);
+            }
+            logMap.put("message", "Could not change password");
+            return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            logMap.put("message", "An error has occurred. Please try again later.");
+            System.out.println(e.getMessage());
+            return new ResponseEntity<>(logMap, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

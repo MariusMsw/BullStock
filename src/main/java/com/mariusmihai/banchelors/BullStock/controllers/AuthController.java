@@ -1,14 +1,12 @@
 package com.mariusmihai.banchelors.BullStock.controllers;
 
+import com.mariusmihai.banchelors.BullStock.dtos.auth.ChangePasswordDto;
 import com.mariusmihai.banchelors.BullStock.dtos.auth.LoginRequest;
 import com.mariusmihai.banchelors.BullStock.dtos.auth.RefreshTokenRequest;
 import com.mariusmihai.banchelors.BullStock.dtos.auth.RegisterRequest;
 import com.mariusmihai.banchelors.BullStock.services.AuthService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
@@ -38,5 +36,10 @@ public class AuthController {
     @PostMapping("/refreshToken")
     public ResponseEntity<Object> refreshToken(@RequestBody RefreshTokenRequest refreshTokenRequest) {
         return this.authService.refreshToken(refreshTokenRequest);
+    }
+
+    @PutMapping("/password")
+    public ResponseEntity<Object> changePassword(@RequestBody ChangePasswordDto passwords) {
+        return this.authService.changePassword(passwords);
     }
 }
