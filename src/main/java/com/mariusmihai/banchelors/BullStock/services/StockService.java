@@ -14,6 +14,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import javax.json.bind.Jsonb;
+import javax.json.bind.JsonbBuilder;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -23,7 +25,7 @@ public class StockService {
     private final StockRepository stockRepository;
     private final UserRepository userRepository;
     private final UserStockPortofolioRepository userStockPortofolioRepository;
-    private List<Stock> allStocks;
+    private final Jsonb jsonb = JsonbBuilder.create();
 
     public StockService(StockRepository stockRepository, UserRepository userRepository, UserStockPortofolioRepository userStockPortofolioRepository) {
         this.stockRepository = stockRepository;
@@ -61,6 +63,42 @@ public class StockService {
         }
         user.getUserStatistics().setProfit(userProfit == 0 ? user.getUserStatistics().getProfit() : userProfit);
         this.userRepository.save(user);
+    }
+
+    @Scheduled(cron = "0/40 0/1 * 1/1 * ?")
+    public void refreshStockPrices() {
+        var allStocks = this.stockRepository.findAllStocks();
+        for (var stock : allStocks) {
+            stock.setAsk(getNextPrice(stock.getAsk()));
+            this.stockRepository.save(stock);
+        }
+    }
+
+    private double getNextPrice(double oldPrice) {
+        var _random = new Random();
+        // Instead of a fixed volatility, pick a random volatility
+        // each time, between 2 and 10.
+        double volatility = _random.nextFloat() * 3 + 2;
+
+        double rnd = _random.nextFloat();
+
+        double changePercent = 2 * volatility * rnd;
+
+        if (changePercent > volatility) {
+            changePercent -= (2 * volatility);
+        }
+        double changeAmount = oldPrice * changePercent / 100;
+        double newPrice = oldPrice + changeAmount;
+
+        // Add a ceiling and floor.
+        if (newPrice < 0.7 * oldPrice) {
+            newPrice += Math.abs(changeAmount) * 2;
+        } else if (newPrice > 1.3 * oldPrice) {
+            newPrice -= Math.abs(changeAmount) * 2;
+        }
+
+        return newPrice;
+
     }
 
     public ResponseEntity<Object> getWinners() {
@@ -109,9 +147,10 @@ public class StockService {
         }
     }
 
-    public ResponseEntity<Object> addStock(Stock stock) {
+    public ResponseEntity<Object> addStock(String stockString) {
         Map<String, String> logMap = new HashMap<>();
         try {
+            Stock stock = jsonb.fromJson(stockString, Stock.class);
             var existingStock = this.stockRepository.findBySymbol(stock.getSymbol());
             if (existingStock.isPresent()) {
                 logMap.put("message", "This stock already exists");
@@ -184,10 +223,6 @@ public class StockService {
             response.add(basicFavoriteStockDto);
         }
         return new ResponseEntity<>(response, HttpStatus.OK);
-    }
-
-    private Stock getStock(String symbol) {
-        return this.allStocks.stream().filter(stock -> stock.getSymbol().equals(symbol)).findFirst().orElse(null);
     }
 
 }
