@@ -154,13 +154,14 @@ public class AuthService {
             }
             var user = this.userRepository.findByEmail(userEmail.get());
             if (user.isPresent()) {
-                var userTokensOptional = this.tokensRepository.findByUserId(user.get().getId());
-                if (userTokensOptional.isEmpty()) {
+                var userTokens = this.tokensRepository.findAllByUserId(user.get().getId());
+                if (userTokens.isEmpty()) {
                     logMap.put("message", "This user has no valid tokens!");
                     return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
                 }
-                this.tokensRepository.deleteByUserId(user.get().getId());
-                return new ResponseEntity<>(HttpStatus.OK);
+                userTokens.forEach(token -> this.tokensRepository.deleteAllByUserId(user.get().getId()));
+                logMap.put("message", "Success");
+                return new ResponseEntity<>(logMap, HttpStatus.OK);
             }
             logMap.put("message", "Could not logout user");
             return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
