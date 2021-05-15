@@ -1,5 +1,6 @@
 package com.mariusmihai.banchelors.BullStock.controllers;
 
+import com.mariusmihai.banchelors.BullStock.dtos.CashDto;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.TradeStockDto;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.UserDto;
 import com.mariusmihai.banchelors.BullStock.services.UserService;
@@ -64,6 +65,16 @@ public class UserController {
     @DeleteMapping("/stock")
     public ResponseEntity<Object> sellStock(@RequestBody TradeStockDto request) {
         return this.userService.sellStock(request);
+    }
+
+    @PostMapping("/deposit")
+    public ResponseEntity<Object> depositMoney(@RequestBody CashDto request) {
+        return this.userService.depositMoney(request);
+    }
+
+    @PostMapping("/withdraw")
+    public ResponseEntity<Object> withdrawMoney(@RequestBody CashDto request) {
+        return this.userService.withdrawMoney(request);
     }
 
 }

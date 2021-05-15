@@ -69,7 +69,7 @@ public class AuthService {
                     .lastName(registerRequest.getLastName())
                     .email(registerRequest.getEmail())
                     .password(BCrypt.hashpw(registerRequest.getPassword(), BCrypt.gensalt()))
-                    .currency(registerRequest.getCurrency() == null ? Currency.EUR : registerRequest.getCurrency())
+                    .currency(registerRequest.getCurrency() == null ? Currency.USD : registerRequest.getCurrency())
                     .userStatistics(userStatistics)
                     .build();
             userRepository.save(newUser);

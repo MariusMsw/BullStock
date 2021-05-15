@@ -1,5 +1,6 @@
 package com.mariusmihai.banchelors.BullStock.services;
 
+import com.mariusmihai.banchelors.BullStock.dtos.CashDto;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.BasicStockDto;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.TradeStockDto;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.UserDto;
@@ -326,6 +327,39 @@ public class UserService {
         }
     }
 
+    public ResponseEntity<Object> depositMoney(CashDto request) {
+        Map<String, Object> logMap = new HashMap<>();
+        var user = getLoggedUser();
+        if (null != user) {
+            user.getUserStatistics().setBalance(user.getUserStatistics().getBalance() + request.getAmount());
+            this.userStatisticsRepository.save(user.getUserStatistics());
+            this.userRepository.save(user);
+            logMap.put("message", "Success");
+            return new ResponseEntity<>(logMap, HttpStatus.OK);
+        }
+        logMap.put("message", "Failed");
+        return new ResponseEntity<>(logMap, HttpStatus.BAD_REQUEST);
+    }
+
+    public ResponseEntity<Object> withdrawMoney(CashDto request) {
+        Map<String, Object> logMap = new HashMap<>();
+        var user = getLoggedUser();
+        if (null != user) {
+            var userBalance = user.getUserStatistics().getBalance();
+            if (request.getAmount() > userBalance) {
+                logMap.put("message", "Too much!");
+                return new ResponseEntity<>(logMap, HttpStatus.BAD_REQUEST);
+            }
+            user.getUserStatistics().setBalance(user.getUserStatistics().getBalance() - request.getAmount());
+            this.userStatisticsRepository.save(user.getUserStatistics());
+            this.userRepository.save(user);
+            logMap.put("message", "Success");
+            return new ResponseEntity<>(logMap, HttpStatus.OK);
+        }
+        logMap.put("message", "Failed");
+        return new ResponseEntity<>(logMap, HttpStatus.BAD_REQUEST);
+    }
+
     private void persistTransaction(User user, Transaction transaction, UserTransaction userTransaction, UserStockPortofolio userStockPortofolio) {
         this.userStockPortofolioRepository.save(userStockPortofolio);
 
@@ -425,5 +459,4 @@ public class UserService {
         }
         return null;
     }
-
 }
