@@ -1,6 +1,6 @@
 package com.mariusmihai.banchelors.BullStock.controllers;
 
-import com.mariusmihai.banchelors.BullStock.models.Stock;
+import com.mariusmihai.banchelors.BullStock.dtos.stocks.StockChartRequest;
 import com.mariusmihai.banchelors.BullStock.services.StockService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,4 +40,8 @@ public class StockController {
         return this.stockService.getStockDetails(id);
     }
 
+    @GetMapping("/chart")
+    public ResponseEntity<Object> getStockChart(@RequestBody StockChartRequest request) {
+        return this.stockService.getStockChart(request);
+    }
 }

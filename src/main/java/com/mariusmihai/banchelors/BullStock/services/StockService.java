@@ -1,6 +1,8 @@
 package com.mariusmihai.banchelors.BullStock.services;
 
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.BasicStockDto;
+import com.mariusmihai.banchelors.BullStock.dtos.stocks.StockChartRequest;
+import com.mariusmihai.banchelors.BullStock.dtos.stocks.StockChartResponse;
 import com.mariusmihai.banchelors.BullStock.models.Stock;
 import com.mariusmihai.banchelors.BullStock.models.User;
 import com.mariusmihai.banchelors.BullStock.repositories.StockRepository;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -176,6 +179,63 @@ public class StockService {
             logMap.put("message", "Something went wrong");
             return new ResponseEntity<>(logMap, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public ResponseEntity<Object> getStockChart(StockChartRequest request) {
+
+        Map<String, String> logMap = new HashMap<>();
+        try {
+            var existingStock = this.stockRepository.findBySymbol(request.getSymbol());
+            if (existingStock.isEmpty()) {
+                logMap.put("message", "This stock does not exists");
+                return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
+            }
+            List<StockChartResponse> response = new ArrayList<>();
+            switch (request.getPeriod()) {
+                case ONE_HOUR:
+                    response = computeStockPricesBasedOnPeriod(Instant.now().minusSeconds(3600),
+                            10, existingStock.get().getAsk());
+                    break;
+                case ONE_DAY:
+                    response = computeStockPricesBasedOnPeriod(Instant.now().minusSeconds(86400),
+                            30, existingStock.get().getAsk());
+                    break;
+                case ONE_WEEK:
+                    response = computeStockPricesBasedOnPeriod(Instant.now().minusSeconds(604800),
+                            30, existingStock.get().getAsk());
+                    break;
+                case ONE_MONTH:
+                    response = computeStockPricesBasedOnPeriod(Instant.now().minusSeconds(2629743),
+                            30, existingStock.get().getAsk());
+                    break;
+                case ONE_YEAR:
+                    response = computeStockPricesBasedOnPeriod(Instant.now().minusSeconds(31556926),
+                            30, existingStock.get().getAsk());
+                    break;
+            }
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+
+        } catch (Exception e) {
+            logMap.put("message", "Something went wrong");
+            return new ResponseEntity<>(logMap, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private List<StockChartResponse> computeStockPricesBasedOnPeriod(Instant from, int numberOfIntervals, double lastPrice) {
+        List<StockChartResponse> response = new ArrayList<>();
+        Instant lastValue = from;
+        long totalLength = Instant.now().getEpochSecond() - from.getEpochSecond();
+        long subrangeLength = totalLength / numberOfIntervals;
+        for (int i = 0; i < numberOfIntervals; i++) {
+            StockChartResponse value = new StockChartResponse()
+                    .setPeriod(lastValue)
+                    .setPrice(getNextPrice(lastPrice));
+            lastValue = lastValue.plusSeconds(subrangeLength);
+            response.add(value);
+        }
+
+        return response;
     }
 
     private User getLoggedUser() {
