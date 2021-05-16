@@ -58,8 +58,6 @@ public class UserService {
             var userDto = new UserDto()
                     .setId(user.getId())
                     .setEmail(user.getEmail())
-                    .setFirstName(user.getFirstName())
-                    .setLastName(user.getLastName())
                     .setUserStatistics(user.getUserStatistics());
             usersDto.add(userDto);
         }
@@ -144,9 +142,7 @@ public class UserService {
             if (null != user) {
                 var response = new UserDto()
                         .setEmail(user.getEmail())
-                        .setFirstName(user.getFirstName())
                         .setId(user.getId())
-                        .setLastName(user.getLastName())
                         .setUserStatistics(user.getUserStatistics());
                 return new ResponseEntity<>(response, HttpStatus.OK);
             }

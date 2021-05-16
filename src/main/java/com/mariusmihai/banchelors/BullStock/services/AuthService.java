@@ -59,14 +59,12 @@ public class AuthService {
                 return new ResponseEntity<>(logMap, HttpStatus.CONFLICT);
             }
             var userStatistics = new UserStatistics()
-                    .setBalance(5000)
+                    .setBalance(0)
                     .setPortofolioValue(0)
                     .setProfit(0)
                     .setFavoriteStocks(List.of());
 
             User newUser = User.builder()
-                    .firstName(registerRequest.getFirstName())
-                    .lastName(registerRequest.getLastName())
                     .email(registerRequest.getEmail())
                     .password(BCrypt.hashpw(registerRequest.getPassword(), BCrypt.gensalt()))
                     .currency(registerRequest.getCurrency() == null ? Currency.USD : registerRequest.getCurrency())
