@@ -5,6 +5,5 @@ public enum StockChartPeriod {
     ONE_DAY,
     ONE_WEEK,
     ONE_MONTH,
-    ONE_YEAR,
-    MAX
+    ONE_YEAR
 }
