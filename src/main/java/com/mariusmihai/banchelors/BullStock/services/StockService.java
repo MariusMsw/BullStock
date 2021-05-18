@@ -3,6 +3,7 @@ package com.mariusmihai.banchelors.BullStock.services;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.BasicStockDto;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.StockChartRequest;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.StockChartResponse;
+import com.mariusmihai.banchelors.BullStock.dtos.stocks.StockScreenDto;
 import com.mariusmihai.banchelors.BullStock.models.Stock;
 import com.mariusmihai.banchelors.BullStock.models.User;
 import com.mariusmihai.banchelors.BullStock.repositories.StockRepository;
@@ -181,7 +182,7 @@ public class StockService {
         }
     }
 
-    public ResponseEntity<Object> getStockChart(StockChartRequest request) {
+    public ResponseEntity<Object> getStockScreen(StockChartRequest request) {
 
         Map<String, String> logMap = new HashMap<>();
         try {
@@ -190,29 +191,42 @@ public class StockService {
                 logMap.put("message", "This stock does not exists");
                 return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
             }
-            List<StockChartResponse> response = new ArrayList<>();
+            List<StockChartResponse> data = new ArrayList<>();
             switch (request.getPeriod()) {
                 case ONE_HOUR:
-                    response = computeStockPricesBasedOnPeriod(Instant.now().minusSeconds(3600),
+                    data = computeStockPricesBasedOnPeriod(Instant.now().minusSeconds(3600),
                             10, existingStock.get().getAsk());
                     break;
                 case ONE_DAY:
-                    response = computeStockPricesBasedOnPeriod(Instant.now().minusSeconds(86400),
+                    data = computeStockPricesBasedOnPeriod(Instant.now().minusSeconds(86400),
                             30, existingStock.get().getAsk());
                     break;
                 case ONE_WEEK:
-                    response = computeStockPricesBasedOnPeriod(Instant.now().minusSeconds(604800),
+                    data = computeStockPricesBasedOnPeriod(Instant.now().minusSeconds(604800),
                             30, existingStock.get().getAsk());
                     break;
                 case ONE_MONTH:
-                    response = computeStockPricesBasedOnPeriod(Instant.now().minusSeconds(2629743),
+                    data = computeStockPricesBasedOnPeriod(Instant.now().minusSeconds(2629743),
                             30, existingStock.get().getAsk());
                     break;
                 case ONE_YEAR:
-                    response = computeStockPricesBasedOnPeriod(Instant.now().minusSeconds(31556926),
+                    data = computeStockPricesBasedOnPeriod(Instant.now().minusSeconds(31556926),
                             30, existingStock.get().getAsk());
                     break;
             }
+            var volume = userStockPortofolioRepository.findVolumeBySymbol(existingStock.get().getSymbol());
+            var user = getLoggedUser();
+            var favorite = false;
+            if (user != null) {
+                favorite = user.getUserStatistics().getFavoriteStocks().contains(existingStock.get());
+            }
+            if (null == volume) volume = 0;
+            StockScreenDto response = new StockScreenDto()
+                    .setData(data)
+                    .setStockName(existingStock.get().getName())
+                    .setSharePrice(existingStock.get().getAsk())
+                    .setFavorite(favorite)
+                    .setSharesOwned(volume);
 
             return new ResponseEntity<>(response, HttpStatus.OK);
 
@@ -220,6 +234,12 @@ public class StockService {
             logMap.put("message", "Something went wrong");
             return new ResponseEntity<>(logMap, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public ResponseEntity<Object> getVolumeBySymbol(String symbol) {
+        var volume = this.userStockPortofolioRepository.findVolumeBySymbol(symbol);
+        if (null == volume) volume = 0;
+        return new ResponseEntity<>(volume, HttpStatus.OK);
     }
 
     private List<StockChartResponse> computeStockPricesBasedOnPeriod(Instant from, int numberOfIntervals, double lastPrice) {

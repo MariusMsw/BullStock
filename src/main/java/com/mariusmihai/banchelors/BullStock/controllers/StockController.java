@@ -40,8 +40,13 @@ public class StockController {
         return this.stockService.getStockDetails(id);
     }
 
-    @GetMapping("/chart")
-    public ResponseEntity<Object> getStockChart(@RequestBody StockChartRequest request) {
-        return this.stockService.getStockChart(request);
+    @GetMapping("/screen")
+    public ResponseEntity<Object> getStockScreen(@RequestBody StockChartRequest request) {
+        return this.stockService.getStockScreen(request);
+    }
+
+    @GetMapping("/volume/{symbol}")
+    public ResponseEntity<Object> getVolumeBySymbol(@PathVariable("symbol") String symbol) {
+        return this.stockService.getVolumeBySymbol(symbol);
     }
 }
