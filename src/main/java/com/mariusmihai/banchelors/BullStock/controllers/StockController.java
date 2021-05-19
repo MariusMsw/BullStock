@@ -40,7 +40,7 @@ public class StockController {
         return this.stockService.getStockDetails(id);
     }
 
-    @GetMapping("/screen")
+    @PostMapping("/screen")
     public ResponseEntity<Object> getStockScreen(@RequestBody StockChartRequest request) {
         return this.stockService.getStockScreen(request);
     }

@@ -17,9 +17,13 @@ import org.springframework.stereotype.Service;
 
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.mariusmihai.banchelors.BullStock.utils.Helpers.round;
 
 @Service
 public class StockService {
@@ -67,11 +71,12 @@ public class StockService {
         this.userRepository.save(user);
     }
 
-    @Scheduled(cron = "0/40 0/1 * 1/1 * ?")
+    @Scheduled(cron = "0/10 * * * * ?")
     public void refreshStockPrices() {
         var allStocks = this.stockRepository.findAllStocks();
         for (var stock : allStocks) {
             stock.setAsk(getNextPrice(stock.getAsk()));
+            stock.setBid(getNextPrice(stock.getBid()));
             this.stockRepository.save(stock);
         }
     }
@@ -99,7 +104,7 @@ public class StockService {
             newPrice -= Math.abs(changeAmount) * 2;
         }
 
-        return newPrice;
+        return round(newPrice, 2);
 
     }
 
@@ -131,15 +136,19 @@ public class StockService {
         try {
             var stocks = this.stockRepository.findAllStocks();
             var response = new ArrayList<BasicStockDto>();
+            Integer volume = 0;
+            var user = getLoggedUser();
+            boolean loggedIn = null != user;
             for (Stock stock : stocks) {
                 var stockDto = new BasicStockDto()
-                        .setAsk(stock.getAsk())
-                        .setBid(stock.getBid())
+                        .setAsk(round(stock.getAsk(), 2))
+                        .setBid(round(stock.getBid(), 2))
                         .setId(stock.getId())
                         .setName(stock.getName())
-                        .setPriceChangeLastDay(stock.getPriceChangeLastDay())
+                        .setPriceChangeLastDay(round(stock.getPriceChangeLastDay(), 2))
                         .setSymbol(stock.getSymbol())
-                        .setFavorite(checkIfStockIsFavorite(stock.getSymbol()));
+                        .setFavorite(checkIfStockIsFavorite(stock.getSymbol()))
+                        .setSharesOwned(loggedIn ? getVolume(stock.getSymbol(), user.getId()) : 0);
                 response.add(stockDto);
             }
             return new ResponseEntity<>(response, HttpStatus.OK);
@@ -214,11 +223,12 @@ public class StockService {
                             30, existingStock.get().getAsk());
                     break;
             }
-            var volume = userStockPortofolioRepository.findVolumeBySymbol(existingStock.get().getSymbol());
             var user = getLoggedUser();
             var favorite = false;
+            Integer volume = 0;
             if (user != null) {
                 favorite = user.getUserStatistics().getFavoriteStocks().contains(existingStock.get());
+                volume = userStockPortofolioRepository.findVolumeBySymbol(existingStock.get().getSymbol(), user.getId());
             }
             if (null == volume) volume = 0;
             StockScreenDto response = new StockScreenDto()
@@ -237,9 +247,17 @@ public class StockService {
     }
 
     public ResponseEntity<Object> getVolumeBySymbol(String symbol) {
-        var volume = this.userStockPortofolioRepository.findVolumeBySymbol(symbol);
+        var user = getLoggedUser();
+        if (null != user) {
+            return new ResponseEntity<>(getVolume(symbol, user.getId()), HttpStatus.OK);
+        }
+        return new ResponseEntity<>(0, HttpStatus.BAD_REQUEST);
+    }
+
+    private Integer getVolume(String symbol, Integer userId) {
+        var volume = this.userStockPortofolioRepository.findVolumeBySymbol(symbol, userId);
         if (null == volume) volume = 0;
-        return new ResponseEntity<>(volume, HttpStatus.OK);
+        return volume;
     }
 
     private List<StockChartResponse> computeStockPricesBasedOnPeriod(Instant from, int numberOfIntervals, double lastPrice) {

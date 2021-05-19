@@ -2,6 +2,7 @@ package com.mariusmihai.banchelors.BullStock.services;
 
 import com.mariusmihai.banchelors.BullStock.dtos.CashDto;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.BasicStockDto;
+import com.mariusmihai.banchelors.BullStock.dtos.stocks.PortfolioMetadataDto;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.TradeStockDto;
 import com.mariusmihai.banchelors.BullStock.dtos.stocks.UserDto;
 import com.mariusmihai.banchelors.BullStock.models.*;
@@ -323,6 +324,26 @@ public class UserService {
         }
     }
 
+    public ResponseEntity<Object> getPortfolioMetadata() {
+        Map<String, Object> logMap = new HashMap<>();
+        try {
+            var user = getLoggedUser();
+            if (user != null) {
+                this.stockService.calculateUserProfit(user);
+                var portfolioMetadata = new PortfolioMetadataDto()
+                        .setPortfolioValue(Helpers.round(user.getUserStatistics().getPortofolioValue(), 2))
+                        .setBalance(Helpers.round(user.getUserStatistics().getBalance(), 2));
+                return new ResponseEntity<>(portfolioMetadata, HttpStatus.OK);
+            }
+            logMap.put("message", "Could not fetch portfolio metadata");
+            return new ResponseEntity<>(logMap, HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            logMap.put("message", "An error has occurred. Please try again later.");
+            System.out.println(e.getMessage());
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     public ResponseEntity<Object> depositMoney(CashDto request) {
         Map<String, Object> logMap = new HashMap<>();
         var user = getLoggedUser();
@@ -336,6 +357,7 @@ public class UserService {
         logMap.put("message", "Failed");
         return new ResponseEntity<>(logMap, HttpStatus.BAD_REQUEST);
     }
+
 
     public ResponseEntity<Object> withdrawMoney(CashDto request) {
         Map<String, Object> logMap = new HashMap<>();

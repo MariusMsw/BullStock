@@ -19,4 +19,5 @@ public class BasicStockDto {
     private double ask;
     private double priceChangeLastDay;
     private boolean isFavorite;
+    private int sharesOwned;
 }

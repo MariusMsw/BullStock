@@ -32,6 +32,11 @@ public class UserController {
         return this.userService.getStatistics();
     }
 
+    @GetMapping("/portfolio-metadata")
+    public ResponseEntity<Object> getPortfolioMetadata() {
+        return this.userService.getPortfolioMetadata();
+    }
+
     @GetMapping("/favorite")
     public ResponseEntity<Object> getFavoriteStocks() {
         return this.userService.getFavorite();
