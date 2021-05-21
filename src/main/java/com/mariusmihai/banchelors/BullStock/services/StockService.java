@@ -51,16 +51,13 @@ public class StockService {
             return;
         }
         for (var userStockPortofolio : userStockPortofolioList) {
+            refreshStockPrices();
             var updatedStock = this.stockRepository.findBySymbol(userStockPortofolio.getStock().getSymbol()).get();
 
-            if (updatedStock.getLastUpdatedPrice() == updatedStock.getAsk()) {
-                continue;
-            }
             userStockPortofolio.setProfit(userStockPortofolio.getVolume() * (updatedStock.getAsk() - userStockPortofolio.getAveragePrice()));
             var sign = 1;
             if (updatedStock.getAsk() > userStockPortofolio.getAveragePrice()) sign = -1;
             userStockPortofolio.setYield(((updatedStock.getAsk() - userStockPortofolio.getAveragePrice()) / Math.abs(userStockPortofolio.getAveragePrice())) * 100 * sign);
-            userPortofolioValue += userStockPortofolio.getProfit();
             userStockPortofolio.getUser().getUserStatistics().setPortofolioValue(userPortofolioValue);
             userProfit += userStockPortofolio.getProfit();
             updatedStock.setLastUpdatedPrice(updatedStock.getAsk());

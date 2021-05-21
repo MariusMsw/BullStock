@@ -34,11 +34,11 @@ public class FxRateService {
         String url = "";
         for (var currency : Currency.values()) {
             if (currency.equals(Currency.EUR)) {
-                url = "https://api.exchangeratesapi.io/latest?symbols=USD,RON&base=";
+                url = "https://api.exchangerate.host/latest?symbols=USD,RON&base=";
                 this.fxRateRepository.deleteByBaseCurrencyAndToCurrency(currency, currency);
                 this.fxRateRepository.save(new FxRate().setBaseCurrency(currency).setConversionRate(1.0).setFetchTime(Instant.now()).setToCurrency(currency));
             } else {
-                url = "https://api.exchangeratesapi.io/latest?symbols=EUR,USD,RON&base=";
+                url = "https://api.exchangerate.host/latest?symbols=EUR,USD,RON&base=";
             }
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url + currency))
