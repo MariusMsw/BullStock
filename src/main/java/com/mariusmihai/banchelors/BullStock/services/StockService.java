@@ -133,7 +133,6 @@ public class StockService {
         try {
             var stocks = this.stockRepository.findAllStocks();
             var response = new ArrayList<BasicStockDto>();
-            Integer volume = 0;
             var user = getLoggedUser();
             boolean loggedIn = null != user;
             for (Stock stock : stocks) {
@@ -307,11 +306,11 @@ public class StockService {
         for (Stock winner : winners) {
             var basicFavoriteStockDto = new BasicStockDto()
                     .setFavorite(checkIfStockIsFavorite(winner.getSymbol()))
-                    .setAsk(winner.getAsk())
-                    .setBid(winner.getBid())
+                    .setAsk(Helpers.round(winner.getAsk(), 2))
+                    .setBid(Helpers.round(winner.getBid(), 2))
                     .setId(winner.getId())
                     .setName(winner.getName())
-                    .setPriceChangeLastDay(winner.getPriceChangeLastDay())
+                    .setPriceChangeLastDay(Helpers.round(winner.getPriceChangeLastDay(), 2))
                     .setSymbol(winner.getSymbol());
             response.add(basicFavoriteStockDto);
         }

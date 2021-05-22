@@ -91,6 +91,7 @@ public class UserService {
             if (null != user) {
                 this.stockService.calculateUserProfit(user);
                 var response = new ArrayList<BasicStockDto>();
+
                 var favorites = user.getUserStatistics()
                         .getFavoriteStocks()
                         .stream()
@@ -99,11 +100,12 @@ public class UserService {
                 for (var favoriteStock : favorites) {
                     var basicFavoriteStockDto = new BasicStockDto()
                             .setFavorite(true)
-                            .setAsk(favoriteStock.getAsk())
-                            .setBid(favoriteStock.getBid())
+                            .setAsk(Helpers.round(favoriteStock.getAsk(), 2))
+                            .setBid(Helpers.round(favoriteStock.getBid(), 2))
                             .setId(favoriteStock.getId())
+                            .setSharesOwned(getVolume(favoriteStock.getSymbol(), user.getId()))
                             .setName(favoriteStock.getName())
-                            .setPriceChangeLastDay(favoriteStock.getPriceChangeLastDay())
+                            .setPriceChangeLastDay(Helpers.round(favoriteStock.getPriceChangeLastDay(), 2))
                             .setSymbol(favoriteStock.getSymbol());
                     response.add(basicFavoriteStockDto);
                 }
@@ -388,6 +390,12 @@ public class UserService {
         userTransaction.getTransaction().setId(transactionId);
         History userHistoryItem = createHistory(user, userTransaction, userStockPortofolio.getAveragePrice(), transaction.getType());
         this.userHistoryRepository.save(userHistoryItem);
+    }
+
+    private Integer getVolume(String symbol, Integer userId) {
+        var volume = this.userStockPortofolioRepository.findVolumeBySymbol(symbol, userId);
+        if (null == volume) volume = 0;
+        return volume;
     }
 
     private UserStockPortofolio createOrUpdateUserStockPortofolioForBuyType(User user, Stock stock, int volume,
