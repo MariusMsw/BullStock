@@ -80,9 +80,7 @@ public class StockService {
 
     private double getNextPrice(double oldPrice) {
         var _random = new Random();
-        // Instead of a fixed volatility, pick a random volatility
-        // each time, between 2 and 10.
-        double volatility = _random.nextFloat() * 3 + 2;
+        double volatility = _random.nextFloat() * 3 + 1;
 
         double rnd = _random.nextFloat();
 

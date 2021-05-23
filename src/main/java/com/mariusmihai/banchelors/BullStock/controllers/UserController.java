@@ -53,13 +53,8 @@ public class UserController {
     }
 
     @PostMapping("/favorite/{symbol}")
-    public ResponseEntity<Object> addFavoriteStock(@PathVariable("symbol") String symbol) {
-        return this.userService.addFavoriteStock(symbol);
-    }
-
-    @DeleteMapping("/favorite/{symbol}")
-    public ResponseEntity<Object> removeFavoriteStock(@PathVariable("symbol") String symbol) {
-        return this.userService.removeFavoriteStock(symbol);
+    public ResponseEntity<Object> changeFavoriteStatus(@PathVariable("symbol") String symbol) {
+        return this.userService.changeFavoriteStatus(symbol);
     }
 
     @PostMapping("/stock")

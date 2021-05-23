@@ -176,7 +176,7 @@ public class UserService {
         }
     }
 
-    public ResponseEntity<Object> addFavoriteStock(String symbol) {
+    public ResponseEntity<Object> changeFavoriteStatus(String symbol) {
         Map<String, Object> logMap = new HashMap<>();
         try {
             var user = getLoggedUser();
@@ -188,14 +188,19 @@ public class UserService {
                 }
                 var alreadyFavorites = user.getUserStatistics().getFavoriteStocks();
                 if (alreadyFavorites.contains(stock.get())) {
-                    logMap.put("message", "This stock is already favorite");
-                    return new ResponseEntity<>(logMap, HttpStatus.CONFLICT);
+                    alreadyFavorites.remove(stock.get());
+                    user.getUserStatistics().setFavoriteStocks(alreadyFavorites);
+                    userRepository.save(user);
+                    logMap.put("message", "This stock is not favorite anymore");
+                    return new ResponseEntity<>(logMap, HttpStatus.OK);
                 }
                 alreadyFavorites.add(stock.get());
                 user.getUserStatistics().setFavoriteStocks(alreadyFavorites);
-                return new ResponseEntity<>(userRepository.save(user), HttpStatus.OK);
+                logMap.put("message", "This stock is favorite now");
+                userRepository.save(user);
+                return new ResponseEntity<>(logMap, HttpStatus.OK);
             }
-            logMap.put("message", "Could not add this stock as favorite");
+            logMap.put("message", "Could not change this stock favorite status");
             return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             logMap.put("message", "An error has occurred. Please try again later.");
