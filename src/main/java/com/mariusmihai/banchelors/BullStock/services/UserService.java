@@ -165,6 +165,11 @@ public class UserService {
             var user = getLoggedUser();
             if (null != user) {
                 var history = this.userHistoryRepository.findAllByUserIdOrderByOpenDate(user.getId());
+                for (History elem : history) {
+                    elem.setClosePrice(Helpers.round(elem.getClosePrice(), 2));
+                    elem.setOpenPrice(Helpers.round(elem.getOpenPrice(), 2));
+                    elem.setProfit(Helpers.round(elem.getProfit(), 2));
+                }
                 return new ResponseEntity<>(history, HttpStatus.OK);
             }
             logMap.put("message", "Could not fetch history");
