@@ -209,34 +209,6 @@ public class UserService {
         }
     }
 
-    public ResponseEntity<Object> removeFavoriteStock(String symbol) {
-        Map<String, Object> logMap = new HashMap<>();
-        try {
-            var user = getLoggedUser();
-            if (null != user) {
-                var stock = this.stockRepository.findBySymbol(symbol);
-                if (stock.isEmpty()) {
-                    logMap.put("message", "This stock does not exists");
-                    return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
-                }
-                var favoriteStocks = user.getUserStatistics().getFavoriteStocks();
-                if (!favoriteStocks.contains(stock.get())) {
-                    logMap.put("message", "This stock is not favorite");
-                    return new ResponseEntity<>(logMap, HttpStatus.BAD_REQUEST);
-                }
-                favoriteStocks.remove(stock.get());
-                user.getUserStatistics().setFavoriteStocks(favoriteStocks);
-                return new ResponseEntity<>(userRepository.save(user), HttpStatus.OK);
-            }
-            logMap.put("message", "Could not remove this stock from favorite");
-            return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
-        } catch (Exception e) {
-            logMap.put("message", "An error has occurred. Please try again later.");
-            System.out.println(e.getMessage());
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
     @Transactional
     public ResponseEntity<Object> buyStock(TradeStockDto request) {
         Map<String, Object> logMap = new HashMap<>();
