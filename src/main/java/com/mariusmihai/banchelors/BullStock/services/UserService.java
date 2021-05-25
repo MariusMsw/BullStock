@@ -130,8 +130,8 @@ public class UserService {
                     var portfolioScreenDto = new PortfolioScreenDto()
                             .setSymbol(stockPortofolio.getStock().getSymbol())
                             .setSharesOwned(stockPortofolio.getVolume())
-                            .setProfit(stockPortofolio.getProfit())
-                            .setYield(stockPortofolio.getYield());
+                            .setProfit(Helpers.round(stockPortofolio.getProfit(), 2))
+                            .setYield(Helpers.round(stockPortofolio.getYield(),2));
                     response.add(portfolioScreenDto);
                 }
                 return new ResponseEntity<>(response, HttpStatus.OK);
