@@ -1,10 +1,7 @@
 package com.mariusmihai.banchelors.BullStock.services;
 
 import com.mariusmihai.banchelors.BullStock.dtos.CashDto;
-import com.mariusmihai.banchelors.BullStock.dtos.stocks.BasicStockDto;
-import com.mariusmihai.banchelors.BullStock.dtos.stocks.PortfolioMetadataDto;
-import com.mariusmihai.banchelors.BullStock.dtos.stocks.TradeStockDto;
-import com.mariusmihai.banchelors.BullStock.dtos.stocks.UserDto;
+import com.mariusmihai.banchelors.BullStock.dtos.stocks.*;
 import com.mariusmihai.banchelors.BullStock.models.*;
 import com.mariusmihai.banchelors.BullStock.repositories.*;
 import com.mariusmihai.banchelors.BullStock.utils.Helpers;
@@ -126,8 +123,18 @@ public class UserService {
             var user = getLoggedUser();
             if (null != user) {
                 this.stockService.calculateUserProfit(user);
+                List<PortfolioScreenDto> response = new ArrayList<>();
                 var portofolio = this.userStockPortofolioRepository.getPortofolio(user.getId());
-                return new ResponseEntity<>(portofolio, HttpStatus.OK);
+
+                for (UserStockPortofolio stockPortofolio : portofolio) {
+                    var portfolioScreenDto = new PortfolioScreenDto()
+                            .setSymbol(stockPortofolio.getStock().getSymbol())
+                            .setSharesOwned(stockPortofolio.getVolume())
+                            .setProfit(stockPortofolio.getProfit())
+                            .setYield(stockPortofolio.getYield());
+                    response.add(portfolioScreenDto);
+                }
+                return new ResponseEntity<>(response, HttpStatus.OK);
             }
             logMap.put("message", "Could not fetch portofolio");
             return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
