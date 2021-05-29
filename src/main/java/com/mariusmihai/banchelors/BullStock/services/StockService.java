@@ -71,7 +71,7 @@ public class StockService {
         var allStocks = this.stockRepository.findAllStocks();
         for (var stock : allStocks) {
             stock.setAsk(getNextPrice(stock.getAsk()));
-            stock.setBid(getNextPrice(stock.getBid()));
+            stock.setBid(getNextPrice(stock.getAsk()));
             this.stockRepository.save(stock);
         }
     }
