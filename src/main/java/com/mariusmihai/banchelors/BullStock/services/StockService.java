@@ -76,13 +76,13 @@ public class StockService {
         }
     }
 
-    private double getNextPrice(double oldPrice) {
-        var _random = new Random();
-        double volatility = _random.nextFloat() * 3 + 1;
+    private static double getNextPrice(double oldPrice) {
+        var random = new Random();
+        float volatility = random.nextFloat() * 2 + 2;
 
-        double rnd = _random.nextFloat();
+        float rnd = random.nextFloat();
 
-        double changePercent = 2 * volatility * rnd;
+        float changePercent = 2 * (volatility * rnd);
 
         if (changePercent > volatility) {
             changePercent -= (2 * volatility);
@@ -91,9 +91,9 @@ public class StockService {
         double newPrice = oldPrice + changeAmount;
 
         // Add a ceiling and floor.
-        if (newPrice < 0.7 * oldPrice) {
+        if (newPrice < oldPrice * 0.9) {
             newPrice += Math.abs(changeAmount) * 2;
-        } else if (newPrice > 1.3 * oldPrice) {
+        } else if (newPrice > oldPrice * 1.1) {
             newPrice -= Math.abs(changeAmount) * 2;
         }
 
