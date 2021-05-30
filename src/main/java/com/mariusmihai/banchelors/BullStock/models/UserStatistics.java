@@ -24,6 +24,6 @@ public class UserStatistics {
     private double profit;
     private double portofolioValue;
     private double balance;
-    @OneToMany
+    @ManyToMany
     private List<Stock> favoriteStocks;
 }

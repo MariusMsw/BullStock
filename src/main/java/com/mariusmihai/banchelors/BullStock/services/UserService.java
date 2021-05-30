@@ -131,7 +131,7 @@ public class UserService {
                             .setSymbol(stockPortofolio.getStock().getSymbol())
                             .setSharesOwned(stockPortofolio.getVolume())
                             .setProfit(Helpers.round(stockPortofolio.getProfit(), 2))
-                            .setYield(Helpers.round(stockPortofolio.getYield(),2));
+                            .setYield(Helpers.round(stockPortofolio.getYield(), 2));
                     response.add(portfolioScreenDto);
                 }
                 return new ResponseEntity<>(response, HttpStatus.OK);
@@ -202,14 +202,14 @@ public class UserService {
                 if (alreadyFavorites.contains(stock.get())) {
                     alreadyFavorites.remove(stock.get());
                     user.getUserStatistics().setFavoriteStocks(alreadyFavorites);
-                    userRepository.save(user);
+                    userStatisticsRepository.save(user.getUserStatistics());
                     logMap.put("message", "This stock is not favorite anymore");
                     return new ResponseEntity<>(logMap, HttpStatus.OK);
                 }
                 alreadyFavorites.add(stock.get());
                 user.getUserStatistics().setFavoriteStocks(alreadyFavorites);
                 logMap.put("message", "This stock is favorite now");
-                userRepository.save(user);
+                userStatisticsRepository.save(user.getUserStatistics());
                 return new ResponseEntity<>(logMap, HttpStatus.OK);
             }
             logMap.put("message", "Could not change this stock favorite status");
