@@ -57,12 +57,12 @@ public class UserController {
         return this.userService.changeFavoriteStatus(symbol);
     }
 
-    @PostMapping("/stock")
+    @PostMapping("/stock-buy")
     public ResponseEntity<Object> buyStock(@RequestBody TradeStockDto request) {
         return this.userService.buyStock(request);
     }
 
-    @DeleteMapping("/stock")
+    @PostMapping("/stock-sell")
     public ResponseEntity<Object> sellStock(@RequestBody TradeStockDto request) {
         return this.userService.sellStock(request);
     }

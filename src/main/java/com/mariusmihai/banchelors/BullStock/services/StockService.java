@@ -38,32 +38,28 @@ public class StockService {
     }
 
     public void calculateUserProfit(User user) {
-        var userPortofolioValue = user.getUserStatistics().getPortofolioValue();
-        double userProfit = 0;
+        var user1 = this.userRepository.findByEmail(user.getEmail()).get();
+        var userPortofolioValue = 0;
 
-        var userStockPortofolioList = this.userStockPortofolioRepository.getPortofolio(user.getId());
+        var userStockPortofolioList = this.userStockPortofolioRepository.getPortofolio(user1.getId());
         if (userStockPortofolioList.isEmpty()) {
-            user.getUserStatistics().setProfit(0);
-            user.getUserStatistics().setPortofolioValue(0);
-            this.userRepository.save(user);
+            user1.getUserStatistics().setProfit(0);
+            user1.getUserStatistics().setPortofolioValue(0);
+            this.userRepository.save(user1);
             return;
         }
         for (var userStockPortofolio : userStockPortofolioList) {
-            refreshStockPrices();
             var updatedStock = this.stockRepository.findBySymbol(userStockPortofolio.getStock().getSymbol()).get();
 
             userStockPortofolio.setProfit(userStockPortofolio.getVolume() * (updatedStock.getAsk() - userStockPortofolio.getAveragePrice()));
-            var sign = 1;
-            if (updatedStock.getAsk() > userStockPortofolio.getAveragePrice()) sign = -1;
-            userStockPortofolio.setYield(((updatedStock.getAsk() - userStockPortofolio.getAveragePrice()) / Math.abs(userStockPortofolio.getAveragePrice())) * 100 * sign);
-            userStockPortofolio.getUser().getUserStatistics().setPortofolioValue(userPortofolioValue);
-            userProfit += userStockPortofolio.getProfit();
-            updatedStock.setLastUpdatedPrice(updatedStock.getAsk());
+            userPortofolioValue += userStockPortofolio.getProfit() + userStockPortofolio.getVolume() * userStockPortofolio.getAveragePrice();
+            userStockPortofolio.setYield(((updatedStock.getAsk() - userStockPortofolio.getAveragePrice()) / updatedStock.getAsk()) * 100);
             this.userStockPortofolioRepository.save(userStockPortofolio);
-            this.stockRepository.save(updatedStock);
+            user1.getUserStatistics().setProfit(user1.getUserStatistics().getProfit() + userStockPortofolio.getProfit());
+            this.userRepository.save(user1);
         }
-        user.getUserStatistics().setProfit(userProfit == 0 ? user.getUserStatistics().getProfit() : userProfit);
-        this.userRepository.save(user);
+        user1.getUserStatistics().setPortofolioValue(userPortofolioValue);
+        this.userRepository.save(user1);
     }
 
     @Scheduled(cron = "0/10 * * * * ?")
