@@ -1,7 +1,10 @@
 package com.mariusmihai.banchelors.BullStock.repositories;
 
 import com.mariusmihai.banchelors.BullStock.models.UserTokens;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,5 +19,7 @@ public interface TokensRepository extends CrudRepository<UserTokens, Long> {
 
     void deleteByAccessToken(String accessToken);
 
-    Integer deleteAllByUserId(int userId);
+    @Modifying
+    @Query("delete from UserTokens ut where ut.user.id = :userId")
+    Integer deleteAllByUserId(@Param("userId") int userId);
 }

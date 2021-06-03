@@ -19,8 +19,8 @@ import java.util.function.Function;
 
 @Service
 public class JwtService {
-    private final String SECRET_KEY = "secretsecretsecretsecretsecretsecretsecretsecret";
-    private final Long ACCESS_TOKEN_EXPIRATION_MILLIS = TimeUnit.DAYS.toMillis(7);
+    private final static String SECRET_KEY = "secretsecretsecretsecretsecretsecretsecretsecret";
+    private static final Long ACCESS_TOKEN_EXPIRATION_MILLIS = TimeUnit.DAYS.toMillis(7);
     private final Long REFRESH_TOKEN_EXPIRATION_MILLIS = TimeUnit.DAYS.toMillis(14);
 
     @Autowired
@@ -41,7 +41,7 @@ public class JwtService {
                 .getBody());
     }
 
-    private Key getSigningKey() {
+    private static Key getSigningKey() {
         byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(keyBytes);
     }
@@ -55,6 +55,15 @@ public class JwtService {
         );
     }
 
+    public static String generateToken(String email) {
+        Map<String, Object> claims = new HashMap<>();
+        return createToken(
+                claims,
+                email,
+                System.currentTimeMillis() + TimeUnit.DAYS.toMillis(ACCESS_TOKEN_EXPIRATION_MILLIS)
+        );
+    }
+
     public String generateRefreshToken(User user) {
         Map<String, Object> claims = new HashMap<>();
         return createToken(
@@ -64,7 +73,7 @@ public class JwtService {
         );
     }
 
-    private String createToken(Map<String, Object> claims, String subject, Long expireTime) {
+    private static String createToken(Map<String, Object> claims, String subject, Long expireTime) {
         return Jwts.builder().setClaims(claims).setSubject(subject).setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(expireTime))
                 .signWith(getSigningKey())

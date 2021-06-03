@@ -101,7 +101,7 @@ public class AuthService {
             return new ResponseEntity<>(new AuthResponse(token, refreshToken), HttpStatus.OK);
         } catch (BadCredentialsException e) {
             logMap.put("message", "Bad credentials.");
-            return new ResponseEntity<>(logMap, HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(logMap, HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             logMap.put("message", "An error has occurred. Please try again later.");
             return new ResponseEntity<>(logMap, HttpStatus.INTERNAL_SERVER_ERROR);
